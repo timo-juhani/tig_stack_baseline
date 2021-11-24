@@ -1,0 +1,63 @@
+version: "3.8"
+
+networks:
+  tig_net:
+    name: tig_net
+    driver: bridge
+    ipam:
+      config: 
+        - subnet: 10.1.10.0/24
+          gateway: 10.1.10.1
+
+volumes:
+  influxdb:
+    name: influxdb
+  telegraf:
+    name: telegraf
+  grafana:
+    name: grafana
+
+services:
+    influxdb:
+        container_name: influxdb
+        build: 
+            context: ./influxdb
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        networks:
+            tig_net:
+                ipv4_address: 10.1.10.10
+        ports:
+            - 8086:8086
+        environment:
+        - INFLUXDB_DB=telemetry_db
+    
+    telegraf:
+        container_name: telegraf
+        depends_on: 
+            - influxdb
+        build: 
+            context: ./telegraf
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        privileged: true
+        networks:
+            tig_net:
+                ipv4_address: 10.1.10.11
+        ports:
+            - 57000:57000
+
+    grafana:
+        container_name: grafana
+        depends_on: 
+            - telegraf
+        build: 
+            context: ./grafana
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        privileged: true
+        networks:
+            tig_net:
+                ipv4_address: 10.1.10.12
+        ports: 
+            - 3000:3000
